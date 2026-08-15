@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K线计分 BETA1 · 组合拆分计分 · 文华加权周线</title>
+<script src="./lightweight-charts.js"></script>
+<style>
+  :root{
+    --bg:#000; --panel:#0d0f14; --border:#23262e; --text:#d7dae0; --muted:#8a8f9a;
+    --red:#ef4444; --green:#22c55e; --cyan:#00d0d0; --gold:#e5c07b; --purple:#b56fd6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--panel)}
+  header h1{font-size:17px;font-weight:600;letter-spacing:1px}
+  header h1 small{color:var(--muted);font-size:12px;margin-left:8px;font-weight:400}
+  .beta-tag{background:#7c2d12;color:#fdba74;border:1px solid #ea580c;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;letter-spacing:1px;vertical-align:2px;margin-left:8px}
+  #betaBanner{padding:8px 18px;background:#1a1207;border-bottom:1px solid #3a2f17;color:#d8b36a;font-size:12px;line-height:1.6}
+  #betaBanner b{color:#fdba74}
+  .selector{display:flex;flex-direction:column;gap:4px;min-width:280px}
+  .selector label{font-size:12px;color:var(--muted)}
+  select{background:#16181f;color:var(--text);border:1px solid #3a3e48;border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;cursor:pointer;outline:none}
+  select:focus{border-color:var(--gold)}
+  #symbolSearch{background:#16181f;color:var(--text);border:1px solid #3a3e48;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px}
+  #symbolSearch:focus{border-color:var(--gold)}
+  #symbolSearch::placeholder{color:var(--muted)}
+  #status{font-size:12px;color:var(--muted);margin-left:auto}
+  #chips{display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--panel)}
+  .chip{border:1px solid var(--border);border-radius:999px;padding:5px 14px;font-size:13px;background:#12141a}
+  .chip b{font-weight:600}
+  .chip.up b{color:var(--red)} .chip.down b{color:var(--green)}
+  .chip .sub{color:var(--muted);font-size:11px;margin-left:6px}
+  #chart{flex:1;min-height:520px}
+  #snapshot{border-top:1px solid var(--border);background:var(--panel);padding:12px 18px;font-size:13px;min-height:120px}
+  #snapshot h2{font-size:14px;margin-bottom:8px;color:var(--gold)}
+  #snapshot .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 18px;margin-bottom:10px}
+  #snapshot .grid div em{font-style:normal;color:var(--muted);display:block;font-size:11px}
+  .power-chip{display:inline-block;border:1px solid var(--border);border-radius:6px;padding:4px 8px;margin:3px 6px 0 0;font-size:12px;background:#12141a}
+  .power-chip.up{border-color:var(--red);color:var(--red)}
+  .power-chip.down{border-color:var(--green);color:var(--green)}
+  .rule-note{color:#fdba74}
+  #alerts{border-top:1px solid var(--border);background:var(--panel);padding:12px 18px;font-size:13px}
+  #alerts h2{font-size:14px;margin-bottom:8px;color:var(--gold)}
+  #alerts h3{font-size:12px;margin:0 0 6px;color:var(--muted);font-weight:600}
+  #alerts .alert-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+  @media (max-width:760px){#alerts .alert-cols{grid-template-columns:1fr}}
+  .alert-row{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:6px;padding:4px 9px;margin:0 0 4px;font-size:12px;background:#12141a}
+  .alert-row .nm{font-weight:600}
+  .alert-row .sc{color:var(--muted);font-size:11px}
+  .alert-row .dt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+  .alert-row .dt.up{color:var(--red)} .alert-row .dt.down{color:var(--green)}
+  .arrow{font-weight:700;border-radius:5px;padding:1px 6px;font-size:11px}
+  .arrow.up{color:var(--red);background:rgba(239,68,68,.14)}
+  .arrow.down{color:var(--green);background:rgba(34,197,94,.14)}
+  .hint{color:var(--muted);font-size:12px}
+  .up-text{color:var(--red)} .down-text{color:var(--green)}
+</style>
+</head>
+<body>
+<header>
+  <h1>K线计分<span class="beta-tag">BETA1</span><small>文华加权周线 · 力量 / 趋势 · 组合拆分测试版</small></h1>
+  <div class="selector">
+    <label for="symbolSearch">加权连续合约</label>
+    <input id="symbolSearch" type="text" placeholder="搜索：代码 / 拼音 / 中文，如 PTA" autocomplete="off">
+    <select id="symbolSelect"><option>加载中…</option></select>
+  </div>
+  <span id="status"></span>
+</header>
+<div id="betaBanner">
+  <b>BETA1 组合拆分计分规则</b>：三线组合成立时先检查中间K线 —— 中间K线未被右侧（到计算终点）破坏、
+  且能与其左1/左2自成<b>三线</b>组合或与左1自成<b>双线</b>组合、方向与主K线一致时，
+  中间K线<b>保留自己的组合计分</b>，主K线按普通单线规则计分（<b>触轨才计 1 分</b>）；
+  否则保持主K线三线组合形态。数据为本地全量重算，与线上正式版互不影响。
+</div>
+<div id="chips"></div>
+<div id="chart"></div>
+<div id="snapshot"><span class="hint">点击任意一根周K，查看该周收盘时的计分截面（不使用之后的K线）。默认显示最新一周。</span></div>
+<div id="alerts">
+  <h2>力量反转预警 <span id="alertsWeek" class="hint"></span></h2>
+  <div class="alert-cols">
+    <div class="alert-col">
+      <h3>方向反转 <span id="revCnt" class="hint"></span></h3>
+      <div id="revList"><span class="hint">加载中…</span></div>
+    </div>
+    <div class="alert-col">
+      <h3>分数跳变榜（|Δ|≥3）<span id="jmpCnt" class="hint"></span></h3>
+      <div id="jmpList"><span class="hint">加载中…</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== beta：数据来自本地目录 =====
+// 双模式加载：http(s) 预览走 fetch 读 data/*.json；
+// file:// 双击打开时浏览器禁止 fetch 本地文件，改走 <script src> 读 data_js/*.js
+// （data_js 由 gen_js_data.py 从 data/*.json 生成，数据更新后需重跑该脚本）。
+const IS_FILE_PROTOCOL = location.protocol === 'file:';
+async function fetchJson(path){
+  const resp = await fetch(path);
+  if (!resp.ok) throw new Error(path + ' HTTP ' + resp.status);
+  return resp.json();
+}
+function loadData(key){
+  if (!IS_FILE_PROTOCOL){
+    return fetchJson('data/' + encodeURIComponent(key) + '.json');
+  }
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'data_js/' + encodeURIComponent(key) + '.js';
+    s.onload = () => {
+      const v = (window.__KLINE_DATA || {})[key];
+      if (v === undefined) reject(new Error(key + ' 数据缺失（请运行 python gen_js_data.py 重新生成 data_js）'));
+      else resolve(v);
+    };
+    s.onerror = () => reject(new Error(key + '.js 加载失败（file:// 模式需要 data_js 目录，请运行 python gen_js_data.py）'));
+    document.head.appendChild(s);
+  });
+}
+
+const statusEl = document.getElementById('status');
+const selectEl = document.getElementById('symbolSelect');
+const searchEl = document.getElementById('symbolSearch');
+const chipsEl = document.getElementById('chips');
+const snapshotEl = document.getElementById('snapshot');
+
+let chart, candleSeries, bollMid, bollTop, bollBottom, volSeries, volMaSeries, markerSeries;
+let bars = [];          // 当前品种全部周K（含计分快照）
+let selectedIdx = -1;   // 当前查看的周（-1 = 最新）
+
+const DIR_TEXT = {up:'向上', down:'向下', none:'无'};
+const TREND_LABEL = { O1: '趋势1', O2: '趋势2', O3: '趋势3' };
+const RULE_LABEL = {
+  corrected_down_pick_lowest: '修正·探针向下→选最低点',
+  corrected_up_pick_highest: '修正·探针向上→选最高点',
+  fallback_nearest_to_touch: '兜底·就近触轨（探针无方向）',
+  empty_region: '区间为空·沿用触轨K线',
+  legacy_no_touch: '无触轨·分析起点',
+};
+const trendLabel = phase =>
+  Object.prototype.hasOwnProperty.call(TREND_LABEL, phase) ? TREND_LABEL[phase] : '—';
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])
+);
+const validDirection = value => value === 'up' || value === 'down';
+const arrowCountForScore = score => Math.max(0, Math.min(2, Number(score) || 0));
+const isReversal = (previous, current) =>
+  validDirection(previous) && validDirection(current) && previous !== current;
+function reversalFlags(source, limit) {
+  const flags = new Set();
+  const end = Math.min(source.length - 1, limit);
+  for (let i = 1; i <= end; i++) {
+    if (isReversal(source[i - 1].power_direction, source[i].power_direction)) {
+      flags.add(source[i].week_date);
+    }
+  }
+  return flags;
+}
+const dirClass = d => d === 'up' ? 'up' : d === 'down' ? 'down' : '';
+const fmt = (v, d=2) => (v === null || v === undefined || !isFinite(Number(v))) ? '—' : Number(v).toFixed(d);
+const fmtVol = v => {
+  if (v === null || v === undefined || !isFinite(Number(v))) return '—';
+  v = Number(v);
+  return v >= 1e8 ? (v/1e8).toFixed(2)+'亿' : v >= 1e4 ? (v/1e4).toFixed(1)+'万' : String(Math.round(v));
+};
+const toFinitePrice = value => {
+  if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+const markerPayloadForBar = bar => {
+  if (!bar) return null;
+  const ref = toFinitePrice(bar.c), high = toFinitePrice(bar.h), low = toFinitePrice(bar.l);
+  if (![ref, high, low].every(Number.isFinite)) return null;
+  return {
+    time: bar.week_date, ref, high, low,
+    up: 0, down: 0, trend: null, badge: false, reversal: false,
+  };
+};
+const currentBarIndex = () =>
+  Number.isInteger(selectedIdx) && selectedIdx >= 0 && selectedIdx < bars.length
+    ? selectedIdx : bars.length - 1;
+const hasHistoricalSelection = () =>
+  Number.isInteger(selectedIdx) && selectedIdx >= 0 && selectedIdx < bars.length;
+
+// —— 自定义标记层：力量箭头 + 趋势圈 + 起点徽标 + 反转文字 ——
+let markerState = null;
+function drawArrow(ctx, x, y, s, dir, color){
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  if (dir === 'up'){
+    ctx.moveTo(x, y - s * 0.9);
+    ctx.lineTo(x - s, y + s * 0.15); ctx.lineTo(x - s * 0.35, y + s * 0.15);
+    ctx.lineTo(x - s * 0.35, y + s * 0.95); ctx.lineTo(x + s * 0.35, y + s * 0.95);
+    ctx.lineTo(x + s * 0.35, y + s * 0.15); ctx.lineTo(x + s, y + s * 0.15);
+  } else {
+    ctx.moveTo(x, y + s * 0.9);
+    ctx.lineTo(x - s, y - s * 0.15); ctx.lineTo(x - s * 0.35, y - s * 0.15);
+    ctx.lineTo(x - s * 0.35, y - s * 0.95); ctx.lineTo(x + s * 0.35, y - s * 0.95);
+    ctx.lineTo(x + s * 0.35, y - s * 0.15); ctx.lineTo(x + s, y - s * 0.15);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+const markerSeriesHandler = {
+  name: 'scoreMarkers',
+  defaultOptions: () => ({ priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }),
+  priceValueBuilder: d => [d.ref],
+  isWhitespace: () => false,
+  update: data => { markerState = data; },
+  renderer: () => ({
+    draw(target, priceConverter){
+      target.useMediaCoordinateSpace(({ context: ctx }) => {
+        if (!markerState || !Array.isArray(markerState.bars)) return;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        markerState.bars.forEach(bar => {
+          const d = bar && bar.originalData, x = Number(bar && bar.x);
+          if (!d || !Number.isFinite(x)) return;
+          const s = Math.max(4, Math.min(8, (markerState.barSpacing || 10) * 0.55));
+          const arrowStep = s * 2 + 4;
+          const lowY = priceConverter(d.low), highY = priceConverter(d.high);
+          if (!Number.isFinite(lowY) || !Number.isFinite(highY)) return;
+          const upCount = Math.max(0, Math.min(2, Number(d.up) || 0));
+          const downCount = Math.max(0, Math.min(2, Number(d.down) || 0));
+          // 力量箭头：向上=红色叠放在K线下方，向下=绿色叠放在K线上方，分数=箭头个数
+          for (let k = 0; k < upCount; k++) drawArrow(ctx, x, lowY + 14 + k * arrowStep, s, 'up', '#ef4444');
+          for (let k = 0; k < downCount; k++) drawArrow(ctx, x, highY - 14 - k * arrowStep, s, 'down', '#22c55e');
+          // 趋势阶段金色圆点和"趋势1/趋势2/趋势3"
+          if (d.trend){
+            const upTrend = d.trend.direction === 'up';
+            const y = upTrend ? lowY + 14 + upCount * arrowStep + 12 : highY - 14 - downCount * arrowStep - 12;
+            ctx.fillStyle = '#e5c07b';
+            ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#e5c07b';
+            ctx.font = 'bold 11px Microsoft YaHei, sans-serif';
+            ctx.fillText(trendLabel(d.trend.phase), x, upTrend ? y + 13 : y - 13);
+          }
+          // 计算起点：蓝色圆形 + 白色右箭头 + "起点"字样
+          if (d.badge){
+            const y = highY - 14 - downCount * arrowStep - (d.reversal ? 24 : 0) - 34;
+            ctx.fillStyle = '#2293dd';
+            ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(x + 4.5, y);
+            ctx.lineTo(x - 0.5, y - 4); ctx.lineTo(x - 0.5, y - 1.6);
+            ctx.lineTo(x - 4.5, y - 1.6); ctx.lineTo(x - 4.5, y + 1.6);
+            ctx.lineTo(x - 0.5, y + 1.6); ctx.lineTo(x - 0.5, y + 4);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#2293dd';
+            ctx.font = '10px Microsoft YaHei, sans-serif';
+            ctx.fillText('起点', x, y - 15);
+          }
+          // 探针起点（最后触轨K线）：橙色菱形标记，便于核对修正环节输入
+          if (d.probe){
+            ctx.strokeStyle = '#fb923c';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, highY - 26); ctx.lineTo(x + 6, highY - 20);
+            ctx.lineTo(x, highY - 14); ctx.lineTo(x - 6, highY - 20);
+            ctx.closePath(); ctx.stroke();
+            ctx.fillStyle = '#fb923c';
+            ctx.font = '10px Microsoft YaHei, sans-serif';
+            ctx.fillText('触轨', x, highY - 33);
+            ctx.lineWidth = 1;
+          }
+          // 反转标记：后一根K线只显示简洁的文字
+          if (d.reversal){
+            ctx.fillStyle = '#f87171';
+            ctx.font = 'bold 10px Microsoft YaHei, sans-serif';
+            ctx.fillText('反转', x, highY - 14 - downCount * arrowStep - 15);
+          }
+        });
+      });
+    },
+  }),
+};
+
+function initChart(){
+  chart = LightweightCharts.createChart(document.getElementById('chart'), {
+    layout: { background: { color: '#000' }, textColor: '#c8ccd4', fontFamily: 'Microsoft YaHei, sans-serif' },
+    grid: { vertLines: { color: '#1a1c22' }, horzLines: { color: '#1a1c22' } },
+    rightPriceScale: { borderColor: '#23262e' },
+    timeScale: { borderColor: '#23262e', timeVisible: false },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    autoSize: true,
+  });
+  // 文华配色：阳线红色空心，阴线青色实体
+  candleSeries = chart.addCandlestickSeries({
+    upColor: 'rgba(0,0,0,0)', downColor: '#00d0d0',
+    borderUpColor: '#ef4444', borderDownColor: '#00d0d0',
+    wickUpColor: '#ef4444', wickDownColor: '#00d0d0',
+  });
+  bollMid = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  bollTop = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  bollBottom = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  volSeries = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' } });
+  volMaSeries = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
+  candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.28, bottom: 0.26 } });
+  markerSeries = chart.addCustomSeries(markerSeriesHandler, {});
+  chart.subscribeClick(param => {
+    if (!param.time) return;
+    const idx = bars.findIndex(b => b.week_date === param.time);
+    if (idx >= 0){ selectedIdx = idx; drawMarkers(); renderSnapshot(); }
+  });
+}
+
+// 标记层数据：向上力量=红箭头叠放在K线下方，向下=绿箭头叠放在上方（分数=箭头个数）
+function drawMarkers(){
+  const idx = currentBarIndex();
+  const viewed = bars[idx];
+  const payload = bars.map(markerPayloadForBar).filter(Boolean);
+  const byTime = Object.fromEntries(payload.map(item => [item.time, item]));
+  reversalFlags(bars, idx).forEach(time => { if (byTime[time]) byTime[time].reversal = true; });
+  if (viewed){
+    (viewed.active_power_lines || []).forEach(line => {
+      const p = byTime[line.time];
+      if (!p) return;
+      const count = arrowCountForScore(line.score);
+      if (line.direction === 'up') p.up = Math.max(p.up, count);
+      if (line.direction === 'down') p.down = Math.max(p.down, count);
+    });
+    (viewed.active_trend_lines || []).forEach(line => {
+      const p = byTime[line.time];
+      if (p) p.trend = { phase: line.phase, direction: line.direction };
+    });
+    if (viewed.calc_start && byTime[viewed.calc_start]) byTime[viewed.calc_start].badge = true;
+    if (viewed.calc_start_probe_start && byTime[viewed.calc_start_probe_start]) byTime[viewed.calc_start_probe_start].probe = true;
+  }
+  markerSeries.setData(payload);
+}
+
+function renderChips(){
+  const bar = bars[bars.length - 1];
+  if (!bar){ chipsEl.innerHTML = ''; return; }
+  const trends = bar.active_trend_lines || [];
+  const latestTrend = trends[trends.length - 1];
+  chipsEl.innerHTML =
+    `<span class="chip">最新周 <b>${escapeHtml(bar.week_date)}</b></span>` +
+    `<span class="chip ${escapeHtml(dirClass(bar.power_direction))}">力量方向 <b>${escapeHtml(DIR_TEXT[bar.power_direction] || '无')}</b><span class="sub">总分 ${escapeHtml(bar.total_power_score ?? '—')}</span></span>` +
+    `<span class="chip">有效力量K线 <b>${(bar.active_power_lines || []).length}</b> 条</span>` +
+    `<span class="chip ${escapeHtml(dirClass(latestTrend && latestTrend.direction))}">趋势阶段 <b>${escapeHtml(latestTrend ? trendLabel(latestTrend.phase) : '—')}</b><span class="sub">破坏位 ${escapeHtml(latestTrend ? fmt(latestTrend.break_level, 0) : '—')}</span></span>`;
+}
+
+function renderSnapshot(){
+  const idx = currentBarIndex();
+  const bar = bars[idx];
+  if (!bar){ snapshotEl.innerHTML = '<span class="hint">无数据</span>'; return; }
+  const lines = (bar.active_power_lines || []).map(l =>
+    `<span class="power-chip ${escapeHtml(dirClass(l.direction))}">${escapeHtml(DIR_TEXT[l.direction] || '无')} ${escapeHtml(l.score ?? '—')}分 · ${escapeHtml(l.time)} · ${l.shape === 'triple' ? '三线' : l.shape === 'double' ? '双线' : '单线'}${l.is_high_volume ? ' · 高量' : ''}</span>`
+  ).join('') || '<span class="hint">无</span>';
+  const trends = (bar.active_trend_lines || []).map(t =>
+    `<span class="power-chip ${escapeHtml(dirClass(t.direction))}">${escapeHtml(trendLabel(t.phase))} · ${escapeHtml(DIR_TEXT[t.direction] || '')} · 起点 ${escapeHtml(t.time)} · 破坏位 ${escapeHtml(fmt(t.break_level, 0))}</span>`
+  ).join('') || '<span class="hint">无</span>';
+  // beta 修正依据：仅存在修正信息时展示该行（beta1 组合拆分版无起点修正字段）
+  const probeDir = bar.calc_start_probe_direction;
+  const ruleText = RULE_LABEL[bar.calc_start_rule] || bar.calc_start_rule || '';
+  const probeHtml = bar.calc_start_probe_start
+    ? `<span class="rule-note">${escapeHtml(ruleText)}</span><br>` +
+      `探针起点（最后触轨K线）${escapeHtml(bar.calc_start_probe_start)} · ` +
+      `探针方向 <span class="${escapeHtml(dirClass(probeDir))}-text">${escapeHtml(DIR_TEXT[probeDir] || '无')}</span> / 总分 ${escapeHtml(bar.calc_start_probe_score ?? '—')}<br>` +
+      `区间最高点K线 ${escapeHtml(bar.calc_start_region_high_time || '—')} · 区间最低点K线 ${escapeHtml(bar.calc_start_region_low_time || '—')}`
+    : escapeHtml(ruleText);
+  const probeRow = probeHtml ? `<div><em>起点修正依据</em>${probeHtml}</div>` : '';
+  snapshotEl.innerHTML = `
+    <h2>周线计分截面 · ${escapeHtml(bar.week_date)}${hasHistoricalSelection() ? '（历史周，双击图表返回最新）' : '（最新）'}</h2>
+    <div class="grid">
+      <div><em>OHLC</em>${escapeHtml(fmt(bar.o,0))} / ${escapeHtml(fmt(bar.h,0))} / ${escapeHtml(fmt(bar.l,0))} / ${escapeHtml(fmt(bar.c,0))}</div>
+      <div><em>VOL / MV(3,3)</em>${escapeHtml(fmtVol(bar.vol))} / ${escapeHtml(fmtVol(bar.vol_ma3))}</div>
+      <div><em>BOLL TOP / MID / BOTTOM</em>${escapeHtml(fmt(bar.boll_top,0))} / ${escapeHtml(fmt(bar.boll_mid,0))} / ${escapeHtml(fmt(bar.boll_bottom,0))}</div>
+      <div><em>力量总方向 / 总分 / 当前K分</em><span class="${escapeHtml(dirClass(bar.power_direction))}-text">${escapeHtml(DIR_TEXT[bar.power_direction] || '无')}</span> / ${escapeHtml(bar.total_power_score ?? '—')} / ${escapeHtml(bar.bar_power_score ?? '—')}</div>
+      <div><em>力量反转</em>${bar.power_reversal ? '是（' + escapeHtml(bar.power_change_time || '') + '）' : '否'}</div>
+      <div><em>计算起点</em>${escapeHtml(bar.calc_start || '—')}</div>
+      ${probeRow}
+      <div><em>趋势线</em>${trends}</div>
+    </div>
+    <div><em class="hint">全部有效力量K线（红↑向上 / 绿↓向下）</em><br>${lines}</div>`;
+}
+
+let allSymbols = [];
+
+function renderOptions(list){
+  const groups = {};
+  list.forEach(s => { (groups[s.exchange] = groups[s.exchange] || []).push(s); });
+  selectEl.innerHTML = Object.entries(groups).map(([ex, glist]) =>
+    `<optgroup label="${escapeHtml(ex)}">` + glist.map(s =>
+      `<option value="${escapeHtml(s.code)}">${escapeHtml(s.short_name)} · ${escapeHtml(s.cn_name)} · ${escapeHtml(s.code)}</option>`).join('') + '</optgroup>'
+  ).join('');
+}
+
+function applySearch(){
+  const kw = searchEl.value.trim().toLowerCase();
+  const list = !kw ? allSymbols : allSymbols.filter(s =>
+    (s.code || '').toLowerCase().includes(kw) ||
+    (s.short_name || '').toLowerCase().includes(kw) ||
+    (s.cn_name || '').toLowerCase().includes(kw));
+  if (!list.length){ selectEl.innerHTML = '<option value="">无匹配品种</option>'; return; }
+  if (kw){
+    // 精确/前缀匹配优先：搜"橡胶"应落"橡胶"而非"BR橡胶"（与线上一致）
+    const rank = s => {
+      const cn = (s.cn_name || '').toLowerCase();
+      const sn = (s.short_name || '').toLowerCase();
+      const cd = (s.code || '').toLowerCase();
+      if (cn === kw) return 0;
+      if (sn === kw || cd === kw) return 1;
+      if (cn.startsWith(kw)) return 2;
+      if (sn.startsWith(kw) || cd.startsWith(kw)) return 3;
+      return 4;
+    };
+    list.sort((a, b) => rank(a) - rank(b));
+  }
+  renderOptions(list);
+  selectEl.value = list[0].code;
+}
+
+async function loadSymbols(){
+  try { allSymbols = await loadData('symbols'); }
+  catch (e){ statusEl.textContent = '品种加载失败: ' + e.message; return; }
+  renderOptions(allSymbols);
+  selectEl.addEventListener('change', () => { if (selectEl.value) loadBars(selectEl.value); });
+  searchEl.addEventListener('input', applySearch);
+  searchEl.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && selectEl.value){ loadBars(selectEl.value); searchEl.blur(); }
+  });
+  if (allSymbols.length){ selectEl.value = allSymbols.find(s => s.code === 'rbJQ00.SF') ? 'rbJQ00.SF' : allSymbols[0].code; loadBars(selectEl.value); }
+}
+
+async function loadBars(code){
+  statusEl.textContent = '加载 ' + code + ' …';
+  selectedIdx = -1;
+  try { bars = (await loadData('bars_' + code)).bars; }
+  catch (e){
+    bars = [];
+    candleSeries.setData([]);
+    bollMid.setData([]);
+    bollTop.setData([]);
+    bollBottom.setData([]);
+    volSeries.setData([]);
+    volMaSeries.setData([]);
+    markerSeries.setData([]);
+    chipsEl.innerHTML = '';
+    snapshotEl.innerHTML = '<span class="hint">K线加载失败: ' + escapeHtml(e.message) + '</span>';
+    statusEl.textContent = 'K线加载失败: ' + e.message;
+    return;
+  }
+  candleSeries.setData(bars.map(b => ({ time: b.week_date, open: +b.o, high: +b.h, low: +b.l, close: +b.c })));
+  bollMid.setData(bars.filter(b => b.boll_mid !== null).map(b => ({ time: b.week_date, value: +b.boll_mid })));
+  bollTop.setData(bars.filter(b => b.boll_top !== null).map(b => ({ time: b.week_date, value: +b.boll_top })));
+  bollBottom.setData(bars.filter(b => b.boll_bottom !== null).map(b => ({ time: b.week_date, value: +b.boll_bottom })));
+  volSeries.setData(bars.map(b => ({
+    time: b.week_date, value: +b.vol,
+    color: +b.c >= +b.o ? 'rgba(239,68,68,0.55)' : 'rgba(0,208,208,0.75)',
+  })));
+  volMaSeries.setData(bars.filter(b => b.vol_ma3 !== null).map(b => ({ time: b.week_date, value: +b.vol_ma3 })));
+  chart.timeScale().setVisibleLogicalRange({ from: bars.length - 104, to: bars.length + 2 });
+  drawMarkers(); renderChips(); renderSnapshot();
+  statusEl.textContent = code + ' · ' + bars.length + ' 周 · 更新至 ' + (bars[bars.length-1] || {}).week_date + ' · BETA';
+}
+
+// 双击返回最新周
+document.getElementById('chart').addEventListener('dblclick', () => {
+  selectedIdx = -1; drawMarkers(); renderSnapshot();
+});
+
+// ===== 力量反转预警（全市场，最近两周对比；数据源 data/summary.json）=====
+async function loadAlerts(){
+  const revList = document.getElementById('revList');
+  const jmpList = document.getElementById('jmpList');
+  try {
+    const summary = await loadData('summary');
+    const nameOf = {}; allSymbols.forEach(s => { nameOf[s.code] = s.short_name + ' · ' + s.cn_name; });
+    const weekOf = {}; summary.forEach(b => { (weekOf[b.week_date] = weekOf[b.week_date] || []).push(b); });
+    const w1 = Object.keys(weekOf).sort().pop();
+    const cur = weekOf[w1] || [];
+    const prevWeeks = [...new Set(cur.map(b => b.prev_week_date).filter(Boolean))].sort();
+    const w0 = prevWeeks[prevWeeks.length - 1] || '—';
+    document.getElementById('alertsWeek').textContent = '本周 ' + w1 + ' · 对比上周 ' + w0;
+
+    const revs = cur.filter(b => b.power_reversal)
+      .sort((a, b) => (nameOf[a.symbol] || '').localeCompare(nameOf[b.symbol] || '', 'zh'));
+    const jumps = cur.map(b => {
+      if (b.total_power_score === null || b.prev_total_power_score === null) return null;
+      const d = b.total_power_score - b.prev_total_power_score;
+      return Math.abs(d) >= 3 ? { ...b, delta: d } : null;
+    }).filter(Boolean).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+    document.getElementById('revCnt').textContent = '共 ' + revs.length;
+    document.getElementById('jmpCnt').textContent = '共 ' + jumps.length;
+    revList.innerHTML = revs.length ? revs.map(b =>
+      `<div class="alert-row"><span class="arrow ${escapeHtml(b.power_direction)}">${b.power_direction === 'up' ? '转↑' : '转↓'}</span><span class="nm">${escapeHtml(nameOf[b.symbol] || b.symbol)}</span><span class="sc">现 ${escapeHtml(b.total_power_score ?? '—')} 分 · ${escapeHtml(b.power_change_time || '')}</span></div>`
+    ).join('') : '<span class="hint">本周无方向反转品种</span>';
+    jmpList.innerHTML = jumps.length ? jumps.map(b =>
+      `<div class="alert-row"><span class="nm">${escapeHtml(nameOf[b.symbol] || b.symbol)}</span><span class="sc">${escapeHtml(b.prev_total_power_score)} → ${escapeHtml(b.total_power_score)}</span><span class="dt ${b.delta > 0 ? 'up' : 'down'}">${b.delta > 0 ? '+' : ''}${escapeHtml(b.delta)}</span></div>`
+    ).join('') : '<span class="hint">本周无显著跳变</span>';
+  } catch (e) {
+    revList.innerHTML = '<span class="hint">预警加载失败: ' + escapeHtml(e.message) + '</span>';
+    jmpList.innerHTML = '';
+  }
+}
+
+// 启动保护：图表库加载失败时给出可见错误，避免页面无声卡在"加载中…"
+if (!window.LightweightCharts) {
+  statusEl.textContent = '图表库加载失败，请检查网络后刷新重试';
+  document.getElementById('revList').innerHTML = '<span class="hint">图表库加载失败，页面无法渲染</span>';
+  document.getElementById('jmpList').innerHTML = '';
+} else {
+  try { initChart(); }
+  catch (e) {
+    statusEl.textContent = '图表初始化失败: ' + e.message;
+    document.getElementById('revList').innerHTML = '<span class="hint">图表初始化失败: ' + escapeHtml(e.message) + '</span>';
+    document.getElementById('jmpList').innerHTML = '';
+  }
+  if (window.LightweightCharts && chart) loadSymbols().then(() => loadAlerts());
+}
+</script>
+</body>
+</html>
