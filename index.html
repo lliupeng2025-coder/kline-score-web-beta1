@@ -53,6 +53,7 @@
   .arrow{font-weight:700;border-radius:5px;padding:1px 6px;font-size:11px}
   .arrow.up{color:var(--red);background:rgba(239,68,68,.14)}
   .arrow.down{color:var(--green);background:rgba(34,197,94,.14)}
+  .arrow.none{color:var(--muted);background:rgba(138,143,154,.14)}
   .hint{color:var(--muted);font-size:12px}
   .up-text{color:var(--red)} .down-text{color:var(--green)}
 </style>
@@ -142,10 +143,10 @@ const trendLabel = phase =>
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])
 );
-const validDirection = value => value === 'up' || value === 'down';
+// 反转新规则（2026-08-21 起）：上根周K方向与当前周K方向不一致即算反转，含与"无"(none) 的相互切换
+const normDirection = value => (value === 'up' || value === 'down') ? value : 'none';
 const arrowCountForScore = score => Math.max(0, Math.min(2, Number(score) || 0));
-const isReversal = (previous, current) =>
-  validDirection(previous) && validDirection(current) && previous !== current;
+const isReversal = (previous, current) => normDirection(previous) !== normDirection(current);
 function reversalFlags(source, limit) {
   const flags = new Set();
   const end = Math.min(source.length - 1, limit);
@@ -464,19 +465,19 @@ document.getElementById('chart').addEventListener('dblclick', () => {
   selectedIdx = -1; drawMarkers(); renderSnapshot();
 });
 
-// ===== 力量反转预警（全市场，最近两周对比；数据源 data/summary.json）=====
+// ===== 力量反转预警（全市场；summary.json 每品种一行最新周，各自与自身上一周对比）=====
 async function loadAlerts(){
   const revList = document.getElementById('revList');
   const jmpList = document.getElementById('jmpList');
   try {
     const summary = await loadData('summary');
     const nameOf = {}; allSymbols.forEach(s => { nameOf[s.code] = s.short_name + ' · ' + s.cn_name; });
-    const weekOf = {}; summary.forEach(b => { (weekOf[b.week_date] = weekOf[b.week_date] || []).push(b); });
-    const w1 = Object.keys(weekOf).sort().pop();
-    const cur = weekOf[w1] || [];
-    const prevWeeks = [...new Set(cur.map(b => b.prev_week_date).filter(Boolean))].sort();
-    const w0 = prevWeeks[prevWeeks.length - 1] || '—';
-    document.getElementById('alertsWeek').textContent = '本周 ' + w1 + ' · 对比上周 ' + w0;
+    // 个别品种周最后交易日不是周五（如胶合板），且存在停更品种；
+    // 每行已是该品种最新周，按"周日期 >= 全市场最新周 - 3 天"过滤后再参与预警
+    const w1 = summary.map(b => b.week_date).sort().pop() || '—';
+    const w1min = new Date(Date.parse(w1 + 'T00:00:00') - 3 * 864e5).toISOString().slice(0, 10);
+    const cur = summary.filter(b => b.week_date >= w1min);
+    document.getElementById('alertsWeek').textContent = '本周 ' + w1 + ' · 对比各品种上一周';
 
     const revs = cur.filter(b => b.power_reversal)
       .sort((a, b) => (nameOf[a.symbol] || '').localeCompare(nameOf[b.symbol] || '', 'zh'));
@@ -488,9 +489,11 @@ async function loadAlerts(){
 
     document.getElementById('revCnt').textContent = '共 ' + revs.length;
     document.getElementById('jmpCnt').textContent = '共 ' + jumps.length;
-    revList.innerHTML = revs.length ? revs.map(b =>
-      `<div class="alert-row"><span class="arrow ${escapeHtml(b.power_direction)}">${b.power_direction === 'up' ? '转↑' : '转↓'}</span><span class="nm">${escapeHtml(nameOf[b.symbol] || b.symbol)}</span><span class="sc">现 ${escapeHtml(b.total_power_score ?? '—')} 分 · ${escapeHtml(b.power_change_time || '')}</span></div>`
-    ).join('') : '<span class="hint">本周无方向反转品种</span>';
+    revList.innerHTML = revs.length ? revs.map(b => {
+      const nd = normDirection(b.power_direction);
+      const arrowText = nd === 'up' ? '转↑' : nd === 'down' ? '转↓' : '转—';
+      return `<div class="alert-row"><span class="arrow ${nd}">${arrowText}</span><span class="nm">${escapeHtml(nameOf[b.symbol] || b.symbol)}</span><span class="sc">现 ${escapeHtml(b.total_power_score ?? '—')} 分 · ${escapeHtml(b.week_date || '')}</span></div>`;
+    }).join('') : '<span class="hint">本周无方向反转品种</span>';
     jmpList.innerHTML = jumps.length ? jumps.map(b =>
       `<div class="alert-row"><span class="nm">${escapeHtml(nameOf[b.symbol] || b.symbol)}</span><span class="sc">${escapeHtml(b.prev_total_power_score)} → ${escapeHtml(b.total_power_score)}</span><span class="dt ${b.delta > 0 ? 'up' : 'down'}">${b.delta > 0 ? '+' : ''}${escapeHtml(b.delta)}</span></div>`
     ).join('') : '<span class="hint">本周无显著跳变</span>';
