@@ -56,6 +56,37 @@
   .arrow.none{color:var(--muted);background:rgba(138,143,154,.14)}
   .hint{color:var(--muted);font-size:12px}
   .up-text{color:var(--red)} .down-text{color:var(--green)}
+  /* SimNow paper-trading detail (Beta1 only) */
+  #simnowTrades{border-top:1px solid var(--border);background:var(--panel);padding:14px 18px 24px;font-size:13px}
+  #simnowTrades h2{font-size:15px;margin-bottom:8px;color:var(--gold);display:flex;align-items:baseline;gap:8px}
+  #simnowTradesMeta{color:var(--muted);font-size:11px;margin:-2px 0 10px}
+  #simnowTradesEmpty{border:1px dashed #3a3e48;border-radius:8px;padding:22px 14px;text-align:center;background:#101217}
+  .simnow-product-group{border:1px solid #2a303a;border-radius:8px;margin:0 0 9px;overflow:hidden;background:#0b0d12}
+  .simnow-product-toggle{display:flex;align-items:center;gap:8px;width:100%;border:0;background:#13161d;color:var(--text);padding:10px 12px;text-align:left;font:inherit;cursor:pointer}
+  .simnow-product-toggle:hover{background:#191d26}.simnow-product-toggle .chevron{color:var(--gold);width:13px}
+  .simnow-product-toggle .count{color:var(--muted);font-size:11px}.simnow-product-toggle .product-pnl{margin-left:auto;font-variant-numeric:tabular-nums}
+  .simnow-product-body{padding:9px 10px 2px}.simnow-product-body[hidden]{display:none}
+  .simnow-cycle-card{border:1px solid #29313d;border-left:3px solid #3569d4;border-radius:7px;margin:0 0 10px;overflow:hidden;background:#0f1218}
+  .simnow-cycle-head{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;padding:9px 11px;border-bottom:1px solid #29313d}
+  .simnow-cycle-title{font-weight:700;color:#e9edf5}.simnow-cycle-id{color:#7fb0ff;font-size:11px;word-break:break-all}
+  .simnow-cycle-meta{color:var(--muted);font-size:11px}.simnow-cycle-pnl{margin-left:auto;font-variant-numeric:tabular-nums;color:#d7dae0}
+  .simnow-cycle-pnl .positive{color:var(--red)}.simnow-cycle-pnl .negative{color:var(--green)}
+  .simnow-stage-wrap{overflow-x:auto}.simnow-stage-table{width:100%;min-width:930px;border-collapse:collapse;font-size:11px}
+  .simnow-stage-table th{padding:7px 8px;text-align:left;color:var(--muted);font-weight:500;background:#11151c;white-space:nowrap}
+  .simnow-stage-table td{padding:8px;border-top:1px solid #29313d;vertical-align:top;line-height:1.55}
+  .simnow-stage-table .stage-label{color:#8db7ff;font-weight:600;white-space:nowrap}.simnow-stage-table .stage-time{white-space:nowrap;color:#b5bdcb}
+  .simnow-stage-table .stage-placeholder{color:var(--muted)}
+  .simnow-stage-status{display:inline-block;border:1px solid #4b5563;border-radius:4px;padding:1px 5px;color:#cbd5e1;white-space:nowrap}
+  .simnow-stage-status.done{border-color:#16a34a;color:#4ade80}.simnow-stage-status.active{border-color:#d97706;color:#fdba74}.simnow-stage-status.danger{border-color:#dc2626;color:#f87171}
+  .simnow-leg{display:block;margin:0 0 2px;white-space:nowrap}.simnow-leg:last-child{margin-bottom:0}
+  .simnow-leg .asset{color:var(--muted);font-size:10px;margin-right:4px}.simnow-leg .side{color:#d4d8df;margin-right:4px}
+  .contract-link{border:0;padding:0;background:none;color:#7fb0ff;text-decoration:underline;cursor:pointer;font:inherit;word-break:break-all}
+  .contract-link:hover{color:#b8d5ff}.simnow-detail-sub{color:var(--muted);font-size:10px}
+  .simnow-detail-modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px}
+  .simnow-detail-modal[hidden]{display:none}.simnow-detail-dialog{width:min(1060px,100%);max-height:90vh;overflow:auto;border:1px solid #3a4352;border-radius:9px;background:#0d1016;box-shadow:0 18px 60px #000;color:var(--text);padding:15px}
+  .simnow-detail-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}.simnow-detail-head h3{font-size:14px;color:var(--gold);word-break:break-all}.simnow-detail-close{margin-left:auto;border:1px solid #4b5563;background:#171b23;color:#d7dae0;border-radius:5px;padding:3px 9px;cursor:pointer}
+  .simnow-detail-section{margin-top:12px}.simnow-detail-section h4{font-size:12px;color:#9fb9e7;margin-bottom:5px}.simnow-detail-table{width:100%;border-collapse:collapse;font-size:11px}.simnow-detail-table th,.simnow-detail-table td{border:1px solid #29313d;padding:5px 6px;text-align:left;vertical-align:top}.simnow-detail-table th{color:var(--muted);font-weight:500;background:#131720}
+  @media (max-width:760px){#simnowTrades{padding-left:10px;padding-right:10px}.simnow-cycle-pnl{margin-left:0;width:100%}.simnow-detail-modal{padding:7px}}
 </style>
 </head>
 <body>
@@ -88,6 +119,18 @@
       <h3>分数跳变榜（|Δ|≥3）<span id="jmpCnt" class="hint"></span></h3>
       <div id="jmpList"><span class="hint">加载中…</span></div>
     </div>
+  </div>
+</div>
+<section id="simnowTrades" aria-labelledby="simnowTradesTitle">
+  <h2 id="simnowTradesTitle">SimNow 模拟盘开平仓明细 <span id="simnowTradesWeek" class="hint"></span></h2>
+  <div id="simnowTradesMeta" class="hint">独立模拟盘数据（beta1-simnow-trades-1），不与回测报告混用。</div>
+  <div id="simnowTradesEmpty" class="hint">暂无模拟盘交易明细</div>
+  <div id="simnowTradesGroups"></div>
+</section>
+<div id="contractDetailModal" class="simnow-detail-modal contract-detail" hidden role="dialog" aria-modal="true" aria-labelledby="contractDetailTitle">
+  <div class="simnow-detail-dialog">
+    <div class="simnow-detail-head"><h3 id="contractDetailTitle">合约详情</h3><button class="simnow-detail-close" type="button" data-close-contract>关闭</button></div>
+    <div id="contractDetailBody" class="hint">点击阶段中的合约后加载详情…</div>
   </div>
 </div>
 
@@ -457,6 +500,8 @@ async function loadBars(code){
   volMaSeries.setData(bars.filter(b => b.vol_ma3 !== null).map(b => ({ time: b.week_date, value: +b.vol_ma3 })));
   chart.timeScale().setVisibleLogicalRange({ from: bars.length - 104, to: bars.length + 2 });
   drawMarkers(); renderChips(); renderSnapshot();
+  // 切换顶部K线品种时，交易明细只自动展开对应品种组。
+  if (simnowTradesPayload) { simnowOpenProducts.clear(); renderSimnowTradePanel(simnowTradesPayload); }
   statusEl.textContent = code + ' · ' + bars.length + ' 周 · 更新至 ' + (bars[bars.length-1] || {}).week_date + ' · BETA';
 }
 
@@ -503,6 +548,284 @@ async function loadAlerts(){
   }
 }
 
+// ===== SimNow 模拟盘交易明细（Beta1 独立数据，不读取回测 staged_result） =====
+const SIMNOW_TRADES_SCHEMA = 'beta1-simnow-trades-1';
+const STAGE_LABELS = { 1: 'Stage1', 2: 'Stage2', 3: 'Stage3' };
+const simnowTradesEmptyEl = document.getElementById('simnowTradesEmpty');
+const simnowTradesGroupsEl = document.getElementById('simnowTradesGroups');
+const simnowTradesMetaEl = document.getElementById('simnowTradesMeta');
+const simnowTradesWeekEl = document.getElementById('simnowTradesWeek');
+const contractDetailModalEl = document.getElementById('contractDetailModal');
+const contractDetailBodyEl = document.getElementById('contractDetailBody');
+const contractDetailTitleEl = document.getElementById('contractDetailTitle');
+let simnowTradesPayload = null;
+let simnowOpenProducts = new Set();
+
+const tradeNumber = value => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+// 策略配置中的资金比例可能以0.01/0.02保存，也可能已经是1/2；统一以百分数显示。
+const humanPercent = value => {
+  if (value === null || value === undefined || value === '') return '—';
+  const text = String(value).trim();
+  if (text.endsWith('%')) return text;
+  const n = tradeNumber(value);
+  if (n === null) return text;
+  const percent = Math.abs(n) > 0 && Math.abs(n) < 1 ? n * 100 : n;
+  return `${percent.toLocaleString('zh-CN', { maximumFractionDigits: 4 })}%`;
+};
+const tradeText = value => value === null || value === undefined || value === '' ? '—' : String(value);
+const tradeMoney = value => {
+  const n = tradeNumber(value);
+  if (n === null) return '—';
+  return `${n >= 0 ? '' : ''}${n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元`;
+};
+const tradePnlValue = (pnl, names) => {
+  if (pnl === null || pnl === undefined) return null;
+  if (typeof pnl === 'number' || typeof pnl === 'string') return tradeNumber(pnl);
+  for (const name of names) {
+    const value = tradeNumber(pnl[name]);
+    if (value !== null) return value;
+  }
+  return null;
+};
+const tradePnlClass = value => value === null ? '' : value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+const tradePnlHtml = value => `<span class="${tradePnlClass(value)}">${escapeHtml(tradeMoney(value))}</span>`;
+
+function simnowProducts(payload){
+  if (!payload) return [];
+  if (Array.isArray(payload.products)) return payload.products;
+  if (payload.products && typeof payload.products === 'object') {
+    return Object.entries(payload.products).map(([key, value]) => ({ ...(value || {}), product: value && value.product || key }));
+  }
+  return [];
+}
+
+function productAliases(value){
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  const upper = raw.toUpperCase();
+  const noExchange = upper.split(/[.@:_-]/)[0];
+  const letters = (noExchange.match(/^[A-Z]+/) || [''])[0];
+  return [...new Set([upper, noExchange, letters].filter(Boolean))];
+}
+
+function tradeProductKey(product){
+  const values = [product && product.product, product && product.code, product && product.symbol, product && product.product_name];
+  return productAliases(values.find(Boolean))[0] || 'UNKNOWN';
+}
+
+function selectedTradeAliases(){
+  const selected = selectEl.value || '';
+  const item = allSymbols.find(s => s.code === selected) || {};
+  return new Set([...productAliases(selected), ...productAliases(item.short_name), ...productAliases(item.cn_name), ...productAliases(item.product)]);
+}
+
+function isSelectedTradeProduct(product){
+  const selected = selectedTradeAliases();
+  if (!selected.size) return false;
+  return [product && product.product, product && product.code, product && product.symbol, product && product.product_name]
+    .flatMap(productAliases).some(value => selected.has(value));
+}
+
+function productCycles(product){
+  if (Array.isArray(product.cycles)) return product.cycles;
+  if (Array.isArray(product.trades)) return product.trades;
+  if (Array.isArray(product.records)) return product.records;
+  return [];
+}
+
+function stageNumber(stage){
+  const value = stage && (stage.stage ?? stage.phase ?? stage.name);
+  const match = String(value || '').match(/[123]/);
+  return match ? Number(match[0]) : null;
+}
+
+function stagesForCycle(cycle){
+  const source = Array.isArray(cycle && cycle.stages) ? cycle.stages : [];
+  return [1, 2, 3].map(number => {
+    const found = source.find(item => stageNumber(item) === number);
+    if (found) return found;
+    const waiting = number === 1 ? '等待会话' : number === 2 ? '等待反向放量' : '等待突破';
+    return { stage: number, stage_name: STAGE_LABELS[number], status: waiting, placeholder: true };
+  });
+}
+
+const STATUS_LABELS = {
+  WAITING_SESSION: '等待会话', PENDING: '待提交', SUBMITTED: '已报', PARTIAL: '部分成交',
+  FILLED: '已成交', CANCEL_PENDING: '撤单中', CANCELED: '已撤', REJECTED: '拒单',
+  EXITING: '退出中', CLOSED: '已关闭', PROTECTIVE_HALT: '保护模式',
+};
+function tradeStatus(stage, cycle){
+  const raw = String(stage && stage.status || '').trim();
+  return STATUS_LABELS[raw.toUpperCase()] || raw || (stage && stage.placeholder ? (stage.stage === 1 ? '等待会话' : stage.stage === 2 ? '等待反向放量' : '等待突破') : '待提交');
+}
+function tradeStatusClass(status){
+  const text = String(status);
+  if (['已成交', '已关闭'].includes(text)) return 'done';
+  if (['拒单', '保护模式'].includes(text)) return 'danger';
+  if (['已报', '部分成交', '退出中', '撤单中'].includes(text)) return 'active';
+  return '';
+}
+function tradeLegs(stage){
+  if (!stage || !Array.isArray(stage.legs)) return [];
+  return stage.legs;
+}
+function contractLink(symbol){
+  if (!symbol) return '—';
+  const label = escapeHtml(symbol);
+  return `<button type="button" class="contract-link" data-contract-symbol="${escapeHtml(symbol)}">${label}</button>`;
+}
+function renderTradeLegs(stage){
+  const legs = tradeLegs(stage);
+  if (!legs.length) return stage && stage.placeholder ? '<span class="stage-placeholder">本阶段尚未实际开仓</span>' : '<span class="stage-placeholder">无腿信息</span>';
+  return legs.map(leg => {
+    const asset = leg.asset_type || leg.asset || '—';
+    const side = leg.direction || leg.action || '—';
+    const volume = leg.filled_volume ?? leg.position_volume ?? leg.requested_volume;
+    const price = leg.fill_price ?? leg.limit_price ?? leg.reference_price;
+    const ids = [leg.broker_order_id ? `委托 ${leg.broker_order_id}` : '', Array.isArray(leg.trade_ids) && leg.trade_ids.length ? `成交 ${leg.trade_ids.join(', ')}` : ''].filter(Boolean).join(' · ');
+    return `<span class="simnow-leg"><span class="asset">${escapeHtml(asset)}</span><span class="side">${escapeHtml(side)}</span>${contractLink(leg.symbol)} <span class="simnow-detail-sub">${escapeHtml(tradeText(price))} / ${escapeHtml(tradeText(volume))}手${ids ? ` · ${escapeHtml(ids)}` : ''}</span></span>`;
+  }).join('');
+}
+function renderTradeStageRow(stage, cycle){
+  const n = stageNumber(stage) || stage.stage;
+  const signal = stage.signal_time || stage.trigger_time || '—';
+  const planned = stage.planned_execution_time || stage.execution_time || '—';
+  const status = tradeStatus(stage, cycle);
+  const target = stage.target_pct ?? stage.target_percent;
+  const used = stage.used_cash ?? stage.margin_or_premium ?? stage.target_budget;
+  const exit = stage.exit_reason || '—';
+  const realized = tradePnlValue(stage.realized_pnl, ['value', 'amount']) ?? tradeNumber(stage.realized_pnl);
+  const unrealized = tradePnlValue(stage.unrealized_pnl, ['value', 'amount']) ?? tradeNumber(stage.unrealized_pnl);
+  return `<tr>
+    <td class="stage-label">Stage${escapeHtml(n)}<br><span class="simnow-stage-status ${tradeStatusClass(status)}">${escapeHtml(status)}</span></td>
+    <td class="stage-time">触发 ${escapeHtml(signal)}<br>计划 ${escapeHtml(planned)}</td>
+    <td class="stage-legs">${renderTradeLegs(stage)}</td>
+    <td>${escapeHtml(humanPercent(target))}<br><span class="simnow-detail-sub">目标 ${escapeHtml(tradeMoney(stage.target_budget))}</span></td>
+    <td>${escapeHtml(tradeMoney(used))}<br><span class="simnow-detail-sub">手续费 ${escapeHtml(tradeMoney(stage.commission))}</span></td>
+    <td>${escapeHtml(tradeText(stage.exit_price || stage.mark_price || stage.valuation))}<br><span class="simnow-detail-sub">${escapeHtml(exit)}</span></td>
+    <td>${tradePnlHtml(realized)}<br><span class="simnow-detail-sub">浮动 ${tradePnlHtml(unrealized)}</span></td>
+  </tr>`;
+}
+
+function toggleProductGroup(key){
+  if (simnowOpenProducts.has(key)) simnowOpenProducts.delete(key); else simnowOpenProducts.add(key);
+  const body = document.querySelector(`[data-product-body="${CSS.escape(key)}"]`);
+  const button = document.querySelector(`[data-product-toggle="${CSS.escape(key)}"]`);
+  if (body) body.hidden = !simnowOpenProducts.has(key);
+  if (button){ button.setAttribute('aria-expanded', String(simnowOpenProducts.has(key))); const chev = button.querySelector('.chevron'); if (chev) chev.textContent = simnowOpenProducts.has(key) ? '▼' : '▶'; }
+}
+
+function renderSimnowTradePanel(payload){
+  simnowTradesPayload = payload;
+  const products = simnowProducts(payload);
+  simnowTradesEmptyEl.hidden = products.length > 0;
+  simnowTradesGroupsEl.innerHTML = '';
+  if (!products.length){
+    simnowTradesMetaEl.textContent = payload && payload.schema_version ? `独立模拟盘数据（${payload.schema_version}），暂无已归属交易周期。` : '独立模拟盘数据（beta1-simnow-trades-1），暂无已归属交易周期。';
+    simnowTradesWeekEl.textContent = '';
+    return;
+  }
+  if (payload.schema_version && payload.schema_version !== SIMNOW_TRADES_SCHEMA){
+    simnowTradesMetaEl.textContent = `数据契约 ${payload.schema_version} 与页面期望 ${SIMNOW_TRADES_SCHEMA} 不一致`;
+  } else {
+    simnowTradesMetaEl.textContent = `独立模拟盘数据（${SIMNOW_TRADES_SCHEMA}） · ${tradeText(payload.run_mode || 'simnow')} · 更新时间 ${tradeText(payload.generated_at)}`;
+  }
+  simnowTradesWeekEl.textContent = payload.generated_at ? `更新于 ${payload.generated_at}` : '';
+  products.forEach(product => {
+    const key = tradeProductKey(product);
+    const cycles = productCycles(product);
+    if (isSelectedTradeProduct(product)) simnowOpenProducts.add(key);
+    const open = simnowOpenProducts.has(key);
+    const productName = product.product_name || product.short_name || product.product || product.code || key;
+    const productPnl = tradePnlValue(product.pnl, ['total', 'net', 'realized']) ?? tradeNumber(product.realized_pnl);
+    const cards = cycles.map(cycle => {
+      const pnl = cycle.pnl || {};
+      const realized = tradePnlValue(pnl, ['realized', 'realized_pnl']);
+      const unrealized = tradePnlValue(pnl, ['unrealized', 'unrealized_pnl']);
+      const total = tradePnlValue(pnl, ['total', 'net', 'net_pnl']) ?? (realized !== null && unrealized !== null ? realized + unrealized : realized);
+      const direction = cycle.direction || '—';
+      return `<article class="simnow-cycle-card">
+        <div class="simnow-cycle-head"><span class="simnow-cycle-title">${escapeHtml(productName)}</span><span class="simnow-cycle-id">${escapeHtml(tradeText(cycle.cycle_id))}</span><span class="simnow-cycle-meta">${escapeHtml(direction)} · 反转周 ${escapeHtml(tradeText(cycle.reversal_week))} · 分档 ${escapeHtml(humanPercent(cycle.tier_pct))} · 期货 ${escapeHtml(tradeText(cycle.signal_future_symbol))} · ${escapeHtml(tradeText(cycle.state || '—'))}</span><span class="simnow-cycle-meta">${escapeHtml(tradeText(cycle.created_at))} → ${escapeHtml(tradeText(cycle.closed_at))}</span><span class="simnow-cycle-pnl">已实现 ${tradePnlHtml(realized)} · 浮动 ${tradePnlHtml(unrealized)} · 合计 ${tradePnlHtml(total)}</span></div>
+        <div class="simnow-stage-wrap"><table class="simnow-stage-table"><thead><tr><th>阶段</th><th>触发/执行</th><th>开仓腿（点击合约查看详情）</th><th>目标比例</th><th>使用资金</th><th>平仓/估值</th><th>阶段盈亏</th></tr></thead><tbody>${stagesForCycle(cycle).map(stage => renderTradeStageRow(stage, cycle)).join('')}</tbody></table></div>
+      </article>`;
+    }).join('') || '<div class="stage-placeholder">暂无交易周期</div>';
+    simnowTradesGroupsEl.insertAdjacentHTML('beforeend', `<section class="simnow-product-group" data-product-key="${escapeHtml(key)}"><button type="button" class="simnow-product-toggle" data-product-toggle="${escapeHtml(key)}" aria-expanded="${open}"><span class="chevron">${open ? '▼' : '▶'}</span><b>${escapeHtml(productName)} 交易明细</b><span class="count">${cycles.length} 个交易周期</span><span class="product-pnl">${tradePnlHtml(productPnl)}</span></button><div class="simnow-product-body" data-product-body="${escapeHtml(key)}"${open ? '' : ' hidden'}>${cards}</div></section>`);
+  });
+}
+
+async function loadSimnowTrades(){
+  try {
+    const payload = await loadData('simnow_trades');
+    renderSimnowTradePanel(payload && payload.schema_version ? payload : { products: [] });
+  } catch (e) {
+    simnowTradesPayload = null;
+    simnowTradesEmptyEl.hidden = false;
+    simnowTradesGroupsEl.innerHTML = '';
+    simnowTradesMetaEl.textContent = '模拟盘明细暂不可用：' + e.message;
+  }
+}
+
+function renderContractDetail(detail, symbol){
+  const rows = value => Array.isArray(value) ? value : [];
+  const barsDetail = rows(detail && (detail.bars || detail.kline || detail.candles));
+  const events = rows(detail && (detail.events || detail.order_events || detail.orders));
+  const markers = rows(detail && (detail.strategy_markers || detail.markers || detail.signal_markers)).concat(
+    ['stage2_signal_k', 'stage3_breakout', 'stop_line'].flatMap(key => {
+      const value = detail && detail[key];
+      return value && typeof value === 'object' ? [{ ...value, marker: key }] : [];
+    })
+  );
+  const positions = rows(detail && (detail.positions || detail.position_changes || detail.holding_changes));
+  const valueOf = (item, key) => {
+    if (!item) return undefined;
+    const aliases = {
+      time: ['time', 'timestamp', 'datetime', 'day', 'trade_time', 'update_time'],
+      event: ['event', 'type', 'action', 'status', 'reason'],
+      marker: ['marker', 'type', 'kind'],
+      label: ['label', 'description', 'reason'],
+      price: ['price', 'level', 'mark_price', 'fill_price', 'limit_price'],
+      volume: ['volume', 'position_volume', 'quantity', 'filled_volume'],
+      pnl: ['pnl', 'realized_pnl', 'unrealized_pnl'],
+      broker_order_id: ['broker_order_id', 'order_id'],
+      trade_id: ['trade_id', 'trade_key'],
+    };
+    for (const candidate of aliases[key] || [key]) if (item[candidate] !== undefined && item[candidate] !== null) return item[candidate];
+    return undefined;
+  };
+  const rowHtml = (items, fields) => items.length ? `<table class="simnow-detail-table"><thead><tr>${fields.map(([label]) => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead><tbody>${items.map(item => `<tr>${fields.map(([, key]) => `<td>${escapeHtml(tradeText(valueOf(item, key)))}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '<span class="hint">暂无记录</span>';
+  contractDetailTitleEl.textContent = `合约详情 · ${symbol}`;
+  contractDetailBodyEl.innerHTML = `<div class="simnow-detail-section"><h4>行情</h4>${rowHtml(barsDetail, [['时间', 'time'], ['开', 'open'], ['高', 'high'], ['低', 'low'], ['收', 'close'], ['成交量', 'volume']])}</div><div class="simnow-detail-section"><h4>策略标记（Stage2信号K / Stage3突破 / 止损线）</h4>${rowHtml(markers, [['时间', 'time'], ['标记', 'marker'], ['价格', 'price'], ['说明', 'label']])}</div><div class="simnow-detail-section"><h4>持仓变化</h4>${rowHtml(positions, [['时间', 'time'], ['事件', 'event'], ['方向', 'direction'], ['数量', 'volume'], ['价格', 'price'], ['盈亏', 'pnl']])}</div><div class="simnow-detail-section"><h4>订单与成交事件</h4>${rowHtml(events, [['时间', 'time'], ['事件', 'event'], ['方向', 'direction'], ['数量', 'volume'], ['价格', 'price'], ['订单号', 'broker_order_id'], ['成交号', 'trade_id']])}</div>`;
+}
+
+async function loadContractDetail(symbol){
+  if (!symbol) return;
+  contractDetailModalEl.hidden = false;
+  contractDetailTitleEl.textContent = `合约详情 · ${symbol}`;
+  contractDetailBodyEl.innerHTML = '<span class="hint">加载合约行情与订单事件…</span>';
+  const safe = encodeURIComponent(String(symbol)).replace(/%2F/gi, '_');
+  try {
+    // HTTP部署使用独立的simnow_contracts目录；file://可读取gen_js_data生成的扁平键。
+    const detail = IS_FILE_PROTOCOL
+      ? await loadData('simnow_contracts_' + safe)
+      : await fetchJson('data/simnow_contracts/' + safe + '.json');
+    renderContractDetail(detail || {}, symbol);
+  } catch (e) {
+    contractDetailBodyEl.innerHTML = `<span class="hint">详情加载失败：${escapeHtml(e.message)}。请确认已发布对应的 simnow_contracts 文件。</span>`;
+  }
+}
+function closeContractDetail(){ contractDetailModalEl.hidden = true; }
+simnowTradesGroupsEl.addEventListener('click', event => {
+  const toggle = event.target.closest('[data-product-toggle]');
+  if (toggle){ toggleProductGroup(toggle.dataset.productToggle); return; }
+  const link = event.target.closest('[data-contract-symbol]');
+  if (link) loadContractDetail(link.dataset.contractSymbol);
+});
+contractDetailModalEl.addEventListener('click', event => { if (event.target === contractDetailModalEl || event.target.closest('[data-close-contract]')) closeContractDetail(); });
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeContractDetail(); });
+
 // 启动保护：图表库加载失败时给出可见错误，避免页面无声卡在"加载中…"
 if (!window.LightweightCharts) {
   statusEl.textContent = '图表库加载失败，请检查网络后刷新重试';
@@ -515,7 +838,7 @@ if (!window.LightweightCharts) {
     document.getElementById('revList').innerHTML = '<span class="hint">图表初始化失败: ' + escapeHtml(e.message) + '</span>';
     document.getElementById('jmpList').innerHTML = '';
   }
-  if (window.LightweightCharts && chart) loadSymbols().then(() => loadAlerts());
+  if (window.LightweightCharts && chart) loadSymbols().then(() => Promise.all([loadAlerts(), loadSimnowTrades()]));
 }
 </script>
 </body>
