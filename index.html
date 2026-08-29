@@ -247,15 +247,6 @@ function drawArrow(ctx, x, y, s, dir, color){
   ctx.closePath();
   ctx.fill();
 }
-function drawReversalDot(ctx, x, y, radius){
-  ctx.fillStyle = '#f87171';
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#fecaca';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-}
 const markerSeriesHandler = {
   name: 'scoreMarkers',
   defaultOptions: () => ({ priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }),
@@ -339,10 +330,8 @@ const markerSeriesHandler = {
             ctx.fillText('触轨', x, highY - 33);
             ctx.lineWidth = 1;
           }
-          // 反转标记：每个反转均保留圆点；文字仅在当前缩放下无碰撞时显示
+          // 反转标记：仅显示当前缩放下无碰撞的文字
           if (d.reversal){
-            const dotY = highY - 14 - downCount * arrowStep - 7;
-            drawReversalDot(ctx, x, dotY, Math.max(2.5, Math.min(4, spacing * 0.24)));
             const placement = reversalLayout.get(d.markerKey);
             if (!placement || !placement.showLabel) return;
             ctx.fillStyle = '#f87171';
