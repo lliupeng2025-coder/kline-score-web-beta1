@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K线计分 BETA1 · 组合拆分计分 · 文华加权周线</title>
 <script src="./lightweight-charts.js"></script>
+<script src="./reversal_marker_layout.js"></script>
 <style>
   :root{
     --bg:#000; --panel:#0d0f14; --border:#23262e; --text:#d7dae0; --muted:#8a8f9a;
@@ -217,7 +218,7 @@ const markerPayloadForBar = bar => {
   const ref = toFinitePrice(bar.c), high = toFinitePrice(bar.h), low = toFinitePrice(bar.l);
   if (![ref, high, low].every(Number.isFinite)) return null;
   return {
-    time: bar.week_date, ref, high, low,
+    time: bar.week_date, markerKey: bar.week_date, ref, high, low,
     up: 0, down: 0, trend: null, badge: false, reversal: false,
   };
 };
@@ -246,6 +247,15 @@ function drawArrow(ctx, x, y, s, dir, color){
   ctx.closePath();
   ctx.fill();
 }
+function drawReversalDot(ctx, x, y, radius){
+  ctx.fillStyle = '#f87171';
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#fecaca';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
 const markerSeriesHandler = {
   name: 'scoreMarkers',
   defaultOptions: () => ({ priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }),
@@ -258,9 +268,29 @@ const markerSeriesHandler = {
         if (!markerState || !Array.isArray(markerState.bars)) return;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        markerState.bars.forEach(bar => {
-          const d = bar && bar.originalData, x = Number(bar && bar.x);
-          if (!d || !Number.isFinite(x)) return;
+        const markerBars = markerState.bars.map(bar => {
+          const d = bar && bar.originalData;
+          const rawX = bar && bar.x;
+          const x = typeof rawX === 'number' && Number.isFinite(rawX) ? rawX : NaN;
+          return { bar, d, x };
+        }).filter(item => item.d && Number.isFinite(item.x));
+        const spacing = markerState.barSpacing || 10;
+        const s = Math.max(4, Math.min(8, spacing * 0.55));
+        const arrowStep = s * 2 + 4;
+        const reversalCandidates = markerBars.map(({ bar, d, x }) => {
+          const highY = priceConverter(d.high);
+          const downCount = Math.max(0, Math.min(2, Number(d.down) || 0));
+          const baseY = highY - 14 - downCount * arrowStep - 20;
+          return d.reversal && d.markerKey && Number.isFinite(highY)
+            ? { key: d.markerKey, x, baseY } : null;
+        }).filter(Boolean);
+        const labelWidth = ctx.measureText('反转').width + 6;
+        const reversalLayout = new Map(
+          ReversalMarkerLayout.layoutReversalLabels(reversalCandidates, {
+            labelWidth, labelHeight: 12, laneCount: 3, laneGap: 4,
+          }).map(item => [item.key, item])
+        );
+        markerBars.forEach(({ bar, d, x }) => {
           const s = Math.max(4, Math.min(8, (markerState.barSpacing || 10) * 0.55));
           const arrowStep = s * 2 + 4;
           const lowY = priceConverter(d.low), highY = priceConverter(d.high);
@@ -309,11 +339,15 @@ const markerSeriesHandler = {
             ctx.fillText('触轨', x, highY - 33);
             ctx.lineWidth = 1;
           }
-          // 反转标记：后一根K线只显示简洁的文字
+          // 反转标记：每个反转均保留圆点；文字仅在当前缩放下无碰撞时显示
           if (d.reversal){
+            const dotY = highY - 14 - downCount * arrowStep - 7;
+            drawReversalDot(ctx, x, dotY, Math.max(2.5, Math.min(4, spacing * 0.24)));
+            const placement = reversalLayout.get(d.markerKey);
+            if (!placement || !placement.showLabel) return;
             ctx.fillStyle = '#f87171';
             ctx.font = 'bold 10px Microsoft YaHei, sans-serif';
-            ctx.fillText('反转', x, highY - 14 - downCount * arrowStep - 15);
+            ctx.fillText('反转', x, placement.labelY);
           }
         });
       });
@@ -392,6 +426,8 @@ function renderSnapshot(){
   const idx = currentBarIndex();
   const bar = bars[idx];
   if (!bar){ snapshotEl.innerHTML = '<span class="hint">无数据</span>'; return; }
+  const selectedIsReversal = idx > 0 && isReversal(bars[idx - 1].power_direction, bar.power_direction);
+  const reversalTime = bar.power_change_time || (selectedIsReversal ? bar.week_date : '');
   const lines = (bar.active_power_lines || []).map(l =>
     `<span class="power-chip ${escapeHtml(dirClass(l.direction))}">${escapeHtml(DIR_TEXT[l.direction] || '无')} ${escapeHtml(l.score ?? '—')}分 · ${escapeHtml(l.time)} · ${l.shape === 'triple' ? '三线' : l.shape === 'double' ? '双线' : '单线'}${l.is_high_volume ? ' · 高量' : ''}</span>`
   ).join('') || '<span class="hint">无</span>';
@@ -415,7 +451,7 @@ function renderSnapshot(){
       <div><em>VOL / MV(3,3)</em>${escapeHtml(fmtVol(bar.vol))} / ${escapeHtml(fmtVol(bar.vol_ma3))}</div>
       <div><em>BOLL TOP / MID / BOTTOM</em>${escapeHtml(fmt(bar.boll_top,0))} / ${escapeHtml(fmt(bar.boll_mid,0))} / ${escapeHtml(fmt(bar.boll_bottom,0))}</div>
       <div><em>力量总方向 / 总分 / 当前K分</em><span class="${escapeHtml(dirClass(bar.power_direction))}-text">${escapeHtml(DIR_TEXT[bar.power_direction] || '无')}</span> / ${escapeHtml(bar.total_power_score ?? '—')} / ${escapeHtml(bar.bar_power_score ?? '—')}</div>
-      <div><em>力量反转</em>${bar.power_reversal ? '是（' + escapeHtml(bar.power_change_time || '') + '）' : '否'}</div>
+      <div><em>力量反转</em>${selectedIsReversal ? '是（' + escapeHtml(reversalTime) + '）' : '否'}</div>
       <div><em>计算起点</em>${escapeHtml(bar.calc_start || '—')}</div>
       ${probeRow}
       <div><em>趋势线</em>${trends}</div>
