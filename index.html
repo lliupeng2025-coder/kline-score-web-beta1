@@ -255,20 +255,22 @@ const markerSeriesHandler = {
   update: data => { markerState = data; },
   renderer: () => ({
     draw(target, priceConverter){
-      target.useMediaCoordinateSpace(({ context: ctx }) => {
+      target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
         if (!markerState || !Array.isArray(markerState.bars)) return;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const markerBars = markerState.bars.map(bar => {
           const d = bar && bar.originalData;
-          const rawX = bar && bar.x;
+          const rawX = chart.timeScale().timeToCoordinate(d && d.markerKey);
           const x = typeof rawX === 'number' && Number.isFinite(rawX) ? rawX : NaN;
           return { bar, d, x };
-        }).filter(item => item.d && Number.isFinite(item.x));
+        });
+        const markerGutter = 14;
+        const visibleMarkerBars = markerBars.filter(item => item.d && Number.isFinite(item.x) && item.x >= markerGutter && item.x <= mediaSize.width - markerGutter);
         const spacing = markerState.barSpacing || 10;
         const s = Math.max(4, Math.min(8, spacing * 0.55));
         const arrowStep = s * 2 + 4;
-        const reversalCandidates = markerBars.map(({ bar, d, x }) => {
+        const reversalCandidates = visibleMarkerBars.map(({ bar, d, x }) => {
           const highY = priceConverter(d.high);
           const downCount = Math.max(0, Math.min(2, Number(d.down) || 0));
           const baseY = highY - 14 - downCount * arrowStep - 20;
@@ -281,7 +283,7 @@ const markerSeriesHandler = {
             labelWidth, labelHeight: 12, laneCount: 3, laneGap: 4,
           }).map(item => [item.key, item])
         );
-        markerBars.forEach(({ bar, d, x }) => {
+        visibleMarkerBars.forEach(({ bar, d, x }) => {
           const s = Math.max(4, Math.min(8, (markerState.barSpacing || 10) * 0.55));
           const arrowStep = s * 2 + 4;
           const lowY = priceConverter(d.low), highY = priceConverter(d.high);
