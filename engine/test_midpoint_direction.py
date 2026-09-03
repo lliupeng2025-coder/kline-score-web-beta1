@@ -12,16 +12,17 @@ class MidpointDirectionTests(unittest.TestCase):
         self.assertEqual(result["corrected_direction"], "up")
         self.assertFalse(result["is_direction_reversed"])
 
-    def test_bearish_candle_closing_at_midpoint_is_up(self):
+    def test_bearish_candle_closing_at_midpoint_is_down(self):
         result = classify_weekly_kline_direction(8100, 8215, 7955, 8085)
 
         self.assertEqual(result["traditional_direction"], "down")
-        self.assertEqual(result["corrected_direction"], "up")
+        self.assertEqual(result["corrected_direction"], "down")
+        self.assertFalse(result["is_direction_reversed"])
 
-    def test_flat_candle_closing_at_midpoint_is_up(self):
+    def test_flat_candle_closing_at_midpoint_is_neutral(self):
         result = classify_weekly_kline_direction(8085, 8215, 7955, 8085)
 
-        self.assertEqual(result["corrected_direction"], "up")
+        self.assertEqual(result["corrected_direction"], "none")
 
     def test_bearish_close_below_midpoint_remains_down(self):
         result = classify_weekly_kline_direction(8100, 8215, 7955, 8084)

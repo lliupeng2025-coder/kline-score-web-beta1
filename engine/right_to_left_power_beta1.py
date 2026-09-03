@@ -36,19 +36,15 @@ def classify_weekly_kline_direction(open_price, high, low, close):
         return _NEUTRAL_DIRECTION.copy()
 
     midpoint = (high + low) / 2.0
-    # 中点规则是一个精确边界：只在收盘价严格等于 (H + L) / 2 时向上。
-    # 不使用容差，避免略低于中点的阴线被误判为向上。
-    at_midpoint = close == midpoint
-    if at_midpoint:
-        traditional = "up" if close > open_price else "down" if close < open_price else "none"
-        corrected = "up"
-    elif close == open_price:
+    # 收盘价处于中点时仍按实体方向判断：阳线向上、阴线向下；
+    # 平盘K线没有方向。中点之外沿用原有的反转判定。
+    if close == open_price:
         return _NEUTRAL_DIRECTION.copy()
     elif close > open_price:
-        corrected = "up" if close > midpoint else "down"
+        corrected = "up" if close >= midpoint else "down"
         traditional = "up"
     else:
-        corrected = "down" if close < midpoint else "up"
+        corrected = "down" if close <= midpoint else "up"
         traditional = "down"
     reversed_direction = corrected != traditional
     return {
