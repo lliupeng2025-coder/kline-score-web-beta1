@@ -434,15 +434,17 @@ function initChart(){
     autoSize: true,
   });
   // 文华配色：阳线红色空心，阴线青色实体
+  // 不画序列自带的"最新值水平线"（K线/成交量/MACD柱），只保留右侧最新值标签
   candleSeries = chart.addCandlestickSeries({
     upColor: 'rgba(0,0,0,0)', downColor: '#00d0d0',
     borderUpColor: '#ef4444', borderDownColor: '#00d0d0',
     wickUpColor: '#ef4444', wickDownColor: '#00d0d0',
+    priceLineVisible: false,
   });
   bollMid = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   bollTop = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   bollBottom = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-  volSeries = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' } });
+  volSeries = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, priceLineVisible: false });
   volMaSeries = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   // 技术指标序列：MA5/10/20 主图叠加；MACD / KDJ 各占独立副图（默认隐藏，点按钮显示）
   const indLine = (color, priceScaleId) => chart.addLineSeries({
@@ -451,7 +453,7 @@ function initChart(){
     ...(priceScaleId ? { priceScaleId } : {}),
   });
   maSeries = [indLine('#ffa726'), indLine('#42a5f5'), indLine('#ec407a')];
-  macdHist = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, visible: false });
+  macdHist = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, visible: false, priceLineVisible: false });
   macdDif = indLine('#e8eaf0', 'macd');
   macdDea = indLine('#e5c07b', 'macd');
   kdjK = indLine('#e8eaf0', 'kdj');
