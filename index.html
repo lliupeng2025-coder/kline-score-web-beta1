@@ -446,8 +446,9 @@ function initChart(){
   volMaSeries = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   // 技术指标序列：MA5/10/20 主图叠加；MACD / KDJ 各占独立副图（默认隐藏，点按钮显示）
   const indLine = (color, priceScaleId) => chart.addLineSeries({
-    color, lineWidth: 1, priceScaleId: priceScaleId || '', visible: false,
+    color, lineWidth: 1, visible: false,
     priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+    ...(priceScaleId ? { priceScaleId } : {}),
   });
   maSeries = [indLine('#ffa726'), indLine('#42a5f5'), indLine('#ec407a')];
   macdHist = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, visible: false });
