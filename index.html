@@ -57,6 +57,12 @@
   .arrow.none{color:var(--muted);background:rgba(138,143,154,.14)}
   .hint{color:var(--muted);font-size:12px}
   .up-text{color:var(--red)} .down-text{color:var(--green)}
+  /* 技术指标开关（MA / MACD / KDJ） */
+  #indToolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 18px;border-bottom:1px solid var(--border);background:var(--panel)}
+  #indToolbar .ind-label{font-size:12px;color:var(--muted)}
+  .ind-btn{border:1px solid var(--border);border-radius:999px;padding:4px 13px;font-size:12px;background:#12141a;color:var(--muted);cursor:pointer;font-family:inherit}
+  .ind-btn:hover{border-color:#4b5563;color:var(--text)}
+  .ind-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(229,192,123,.10)}
   /* SimNow paper-trading detail (Beta1 only) */
   #simnowTrades{border-top:1px solid var(--border);background:var(--panel);padding:14px 18px 24px;font-size:13px}
   #simnowTrades h2{font-size:15px;margin-bottom:8px;color:var(--gold);display:flex;align-items:baseline;gap:8px}
@@ -107,6 +113,12 @@
   否则保持主K线三线组合形态。数据为本地全量重算，与线上正式版互不影响。
 </div>
 <div id="chips"></div>
+<div id="indToolbar">
+  <span class="ind-label">技术指标</span>
+  <button type="button" class="ind-btn" data-ind="ma">MA 均线</button>
+  <button type="button" class="ind-btn" data-ind="macd">MACD</button>
+  <button type="button" class="ind-btn" data-ind="kdj">KDJ</button>
+</div>
 <div id="chart"></div>
 <div id="snapshot"><span class="hint">点击任意一根周K，查看该周收盘时的计分截面（不使用之后的K线）。默认显示最新一周。</span></div>
 <div id="alerts">
@@ -172,6 +184,72 @@ const snapshotEl = document.getElementById('snapshot');
 let chart, candleSeries, bollMid, bollTop, bollBottom, volSeries, volMaSeries, markerSeries;
 let bars = [];          // 当前品种全部周K（含计分快照）
 let selectedIdx = -1;   // 当前查看的周（-1 = 最新）
+
+// —— 技术指标（MA / MACD / KDJ）：默认隐藏，点按钮才显示；状态本地记忆 ——
+let maSeries = [], macdHist = null, macdDif = null, macdDea = null, kdjK = null, kdjD = null, kdjJ = null;
+const INDICATORS = { ma: false, macd: false, kdj: false };
+const IND_KEY = 'beta1_indicators_v1';
+try {
+  const savedInd = JSON.parse(localStorage.getItem(IND_KEY) || '{}');
+  if (savedInd && typeof savedInd === 'object') Object.assign(INDICATORS, savedInd);
+} catch (e) {}
+
+// SMA 类均线（窗口满才出值）
+function maSeriesCalc(values, period){
+  const out = [];
+  let sum = 0, count = 0;
+  for (let i = 0; i < values.length; i++){
+    const v = values[i];
+    if (v !== null && v !== undefined && isFinite(v)){ sum += v; count++; }
+    if (i >= period){
+      const old = values[i - period];
+      if (old !== null && old !== undefined && isFinite(old)){ sum -= old; count--; }
+    }
+    out.push(count === period ? sum / period : null);
+  }
+  return out;
+}
+// 指数平滑（EMA），首值用第一个有效数据起算
+function emaSeriesCalc(values, period){
+  const k = 2 / (period + 1);
+  const out = [];
+  let prev = null;
+  for (let i = 0; i < values.length; i++){
+    const v = values[i];
+    if (v === null || v === undefined || !isFinite(v)){ out.push(null); continue; }
+    prev = prev === null ? v : v * k + prev * (1 - k);
+    out.push(prev);
+  }
+  return out;
+}
+// MACD(12,26,9)：DIF=EMA12-EMA26，DEA=EMA9(DIF)，柱=2×(DIF-DEA)
+function macdCalc(closes){
+  const ema12 = emaSeriesCalc(closes, 12);
+  const ema26 = emaSeriesCalc(closes, 26);
+  const dif = closes.map((_, i) => (ema12[i] === null || ema26[i] === null) ? null : ema12[i] - ema26[i]);
+  const dea = emaSeriesCalc(dif, 9);
+  const hist = dif.map((v, i) => (v === null || dea[i] === null) ? null : 2 * (v - dea[i]));
+  return { dif, dea, hist };
+}
+// KDJ(9,3,3)：RSV 用含当周的最近 9 周高低点，K/D 递推平滑（国内口径），J=3K-2D
+function kdjCalc(srcBars){
+  const K = [], D = [], J = [];
+  let k = 50, d = 50;
+  for (let i = 0; i < srcBars.length; i++){
+    const start = Math.max(0, i - 8);
+    let hh = -Infinity, ll = Infinity;
+    for (let j = start; j <= i; j++){
+      const h = +srcBars[j].h, l = +srcBars[j].l;
+      if (isFinite(h) && h > hh) hh = h;
+      if (isFinite(l) && l < ll) ll = l;
+    }
+    const rsv = (hh === -Infinity || ll === Infinity || hh === ll) ? 50 : ((+srcBars[i].c - ll) / (hh - ll)) * 100;
+    k = (2 * k + rsv) / 3;
+    d = (2 * d + k) / 3;
+    K.push(k); D.push(d); J.push(3 * k - 2 * d);
+  }
+  return { K, D, J };
+}
 
 const DIR_TEXT = {up:'向上', down:'向下', none:'无'};
 const TREND_LABEL = { O1: '趋势1', O2: '趋势2', O3: '趋势3' };
@@ -366,6 +444,26 @@ function initChart(){
   bollBottom = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   volSeries = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' } });
   volMaSeries = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  // 技术指标序列：MA5/10/20 主图叠加；MACD / KDJ 各占独立副图（默认隐藏，点按钮显示）
+  const indLine = (color, priceScaleId) => chart.addLineSeries({
+    color, lineWidth: 1, priceScaleId: priceScaleId || '', visible: false,
+    priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+  });
+  maSeries = [indLine('#ffa726'), indLine('#42a5f5'), indLine('#ec407a')];
+  macdHist = chart.addHistogramSeries({ priceScaleId: 'macd', priceFormat: { type: 'volume' }, visible: false });
+  macdDif = indLine('#e8eaf0', 'macd');
+  macdDea = indLine('#e5c07b', 'macd');
+  kdjK = indLine('#e8eaf0', 'kdj');
+  kdjD = indLine('#e5c07b', 'kdj');
+  kdjJ = indLine('#b56fd6', 'kdj');
+  chart.priceScale('macd').applyOptions({ borderColor: '#23262e' });
+  chart.priceScale('kdj').applyOptions({ borderColor: '#23262e' });
+  // KDJ 超买/超卖参考线（80/20），随 K 线序列一起显隐
+  const kdjRefLine = price => kdjK.createPriceLine({
+    price, color: 'rgba(138,143,154,0.4)', lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: false, title: '',
+  });
+  kdjRefLine(80); kdjRefLine(20);
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
   candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.28, bottom: 0.26 } });
   markerSeries = chart.addCustomSeries(markerSeriesHandler, {});
@@ -374,6 +472,53 @@ function initChart(){
     const idx = bars.findIndex(b => b.week_date === param.time);
     if (idx >= 0){ selectedIdx = idx; drawMarkers(); renderSnapshot(); }
   });
+  refreshIndicatorVisibility();
+}
+
+// 指标显隐 + 分栏布局：主图 / MACD / KDJ / 成交量 自上而下动态分配高度
+function applyIndicatorLayout(){
+  const n = (INDICATORS.macd ? 1 : 0) + (INDICATORS.kdj ? 1 : 0);
+  candleSeries.priceScale().applyOptions({
+    scaleMargins: [{ top: 0.28, bottom: 0.26 }, { top: 0.06, bottom: 0.42 }, { top: 0.04, bottom: 0.54 }][n],
+  });
+  chart.priceScale('vol').applyOptions({ scaleMargins: { top: [0.78, 0.80, 0.88][n], bottom: 0 } });
+  chart.priceScale('macd').applyOptions({ scaleMargins: n === 2 ? { top: 0.56, bottom: 0.31 } : { top: 0.60, bottom: 0.24 } });
+  chart.priceScale('kdj').applyOptions({ scaleMargins: n === 2 ? { top: 0.72, bottom: 0.15 } : { top: 0.60, bottom: 0.24 } });
+}
+function refreshIndicatorVisibility(){
+  if (!chart) return;
+  maSeries.forEach(s => s.applyOptions({ visible: !!INDICATORS.ma }));
+  [macdHist, macdDif, macdDea].forEach(s => s && s.applyOptions({ visible: !!INDICATORS.macd }));
+  [kdjK, kdjD, kdjJ].forEach(s => s && s.applyOptions({ visible: !!INDICATORS.kdj }));
+  applyIndicatorLayout();
+  document.querySelectorAll('#indToolbar .ind-btn').forEach(btn => {
+    btn.classList.toggle('active', !!INDICATORS[btn.dataset.ind]);
+  });
+}
+
+// 指标数据：全部由本地周K实时计算（MA5/10/20、MACD(12,26,9)、KDJ(9,3,3)）
+function updateIndicatorData(){
+  if (!macdHist) return;
+  const seriesPoints = values => {
+    const pts = [];
+    for (let j = 0; j < bars.length; j++){
+      const v = values[j];
+      if (v !== null && v !== undefined && isFinite(v)) pts.push({ time: bars[j].week_date, value: v });
+    }
+    return pts;
+  };
+  const closes = bars.map(b => +b.c);
+  [5, 10, 20].forEach((period, i) => maSeries[i].setData(seriesPoints(maSeriesCalc(closes, period))));
+  const macd = macdCalc(closes);
+  macdHist.setData(seriesPoints(macd.hist).map(p => ({
+    ...p, color: p.value >= 0 ? 'rgba(239,68,68,0.55)' : 'rgba(34,197,94,0.55)',
+  })));
+  macdDif.setData(seriesPoints(macd.dif));
+  macdDea.setData(seriesPoints(macd.dea));
+  const kdj = kdjCalc(bars);
+  kdjK.setData(seriesPoints(kdj.K));
+  kdjD.setData(seriesPoints(kdj.D));
+  kdjJ.setData(seriesPoints(kdj.J));
 }
 
 // 标记层数据：向上力量=红箭头叠放在K线下方，向下=绿箭头叠放在上方（分数=箭头个数）
@@ -510,6 +655,8 @@ async function loadBars(code){
     bollBottom.setData([]);
     volSeries.setData([]);
     volMaSeries.setData([]);
+    maSeries.forEach(s => s.setData([]));
+    [macdHist, macdDif, macdDea, kdjK, kdjD, kdjJ].forEach(s => s && s.setData([]));
     markerSeries.setData([]);
     chipsEl.innerHTML = '';
     snapshotEl.innerHTML = '<span class="hint">K线加载失败: ' + escapeHtml(e.message) + '</span>';
@@ -525,6 +672,7 @@ async function loadBars(code){
     color: +b.c >= +b.o ? 'rgba(239,68,68,0.55)' : 'rgba(0,208,208,0.75)',
   })));
   volMaSeries.setData(bars.filter(b => b.vol_ma3 !== null).map(b => ({ time: b.week_date, value: +b.vol_ma3 })));
+  updateIndicatorData();
   chart.timeScale().setVisibleLogicalRange({ from: bars.length - 104, to: bars.length + 2 });
   drawMarkers(); renderChips(); renderSnapshot();
   // 切换顶部K线品种时，交易明细只自动展开对应品种组。
@@ -535,6 +683,17 @@ async function loadBars(code){
 // 双击返回最新周
 document.getElementById('chart').addEventListener('dblclick', () => {
   selectedIdx = -1; drawMarkers(); renderSnapshot();
+});
+
+// —— 技术指标开关：每个指标一个按钮，选中才在图上显示 ——
+document.querySelectorAll('#indToolbar .ind-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.ind;
+    if (!Object.prototype.hasOwnProperty.call(INDICATORS, key)) return;
+    INDICATORS[key] = !INDICATORS[key];
+    try { localStorage.setItem(IND_KEY, JSON.stringify(INDICATORS)); } catch (e) {}
+    refreshIndicatorVisibility();
+  });
 });
 
 // ===== 力量反转预警（全市场；summary.json 每品种一行最新周，各自与自身上一周对比）=====
