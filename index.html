@@ -441,9 +441,9 @@ function initChart(){
     wickUpColor: '#ef4444', wickDownColor: '#00d0d0',
     priceLineVisible: false,
   });
-  bollMid = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-  bollTop = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-  bollBottom = chart.addLineSeries({ color: '#b56fd6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  bollMid = chart.addLineSeries({ color: '#22c55e', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  bollTop = chart.addLineSeries({ color: '#ef4444', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  bollBottom = chart.addLineSeries({ color: '#3b82f6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   volSeries = chart.addHistogramSeries({ priceScaleId: 'vol', priceFormat: { type: 'volume' }, priceLineVisible: false });
   volMaSeries = chart.addLineSeries({ color: '#e5c07b', lineWidth: 1, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
   // 技术指标序列：MA5/10/20 主图叠加；MACD / KDJ 各占独立副图（默认隐藏，点按钮显示）
